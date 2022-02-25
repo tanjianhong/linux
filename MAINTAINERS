@@ -1103,6 +1103,14 @@ W:	http://ez.analog.com/community/linux-device-drivers
 F:	Documentation/devicetree/bindings/iio/frequency/adi,ad9783.yaml
 F:	drivers/iio/frequency/ad9783.c
 
+ANALOG DEVICES INC ADAQ8092 DRIVER
+M:	Antoniu Miclaus <antoniu.miclaus@analog.com>
+L:	linux-iio@vger.kernel.org
+S:	Supported
+W:	http://ez.analog.com/linux-software-drivers
+F:	Documentation/devicetree/bindings/iio/adc/adi,adaq8092.yaml
+F:	drivers/iio/adc/adaq8092.c
+
 ANALOG DEVICES INC ADAR100 DRIVER
 M:	Mircea Caprioru <mircea.caprioru@analog.com>
 L:	linux-iio@vger.kernel.org
