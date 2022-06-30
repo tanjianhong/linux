@@ -15,6 +15,8 @@
 #include <linux/property.h>
 
 #define PHY_ID_ADIN1100				0x0283bc81
+#define PHY_ID_ADIN1110				0x0283bc91
+#define PHY_ID_ADIN2111				0x0283bca1
 
 #define ADIN_FORCED_MODE			0x8000
 #define   ADIN_FORCED_MODE_EN			BIT(0)
@@ -64,6 +66,46 @@ struct adin_priv {
 	unsigned int		tx_level_2v4:1;
 	unsigned int		tx_level_prop_present:1;
 };
+
+static int adin_match_phy_device(struct phy_device *phydev)
+{
+	struct mii_bus *bus = phydev->mdio.bus;
+	int phy_addr = phydev->mdio.addr;
+	u32 id;
+	int rc;
+
+	mutex_lock(&bus->mdio_lock);
+
+	/* Need to call __mdiobus_read() directly here, because at this point
+	 * in time, the driver isn't attached to the PHY device.
+	 */
+	rc = __mdiobus_read(bus, phy_addr, MDIO_DEVID1);
+	if (rc < 0) {
+		mutex_unlock(&bus->mdio_lock);
+		return rc;
+	}
+
+	id = rc << 16;
+
+	rc = __mdiobus_read(bus, phy_addr, MDIO_DEVID2);
+	mutex_unlock(&bus->mdio_lock);
+
+	if (rc < 0)
+		return rc;
+
+	id |= rc;
+
+	switch (id) {
+	case PHY_ID_ADIN1100:
+		return 1;
+	case PHY_ID_ADIN1110:
+		return 1;
+	case PHY_ID_ADIN2111:
+		return 1;
+	default:
+		return 0;
+	}
+}
 
 static int adin_read_status(struct phy_device *phydev)
 {
@@ -265,9 +307,11 @@ static int adin_probe(struct phy_device *phydev)
 
 static struct phy_driver adin_driver[] = {
 	{
-		PHY_ID_MATCH_MODEL(PHY_ID_ADIN1100),
+		.phy_id			= PHY_ID_ADIN1100,
+		.phy_id_mask		= GENMASK(31, 8),
 		.name			= "ADIN1100",
 		.get_features		= adin_get_features,
+		.match_phy_device	= adin_match_phy_device,
 		.soft_reset		= adin_soft_reset,
 		.probe			= adin_probe,
 		.config_aneg		= adin_config_aneg,
@@ -284,6 +328,8 @@ module_phy_driver(adin_driver);
 
 static struct mdio_device_id __maybe_unused adin_tbl[] = {
 	{ PHY_ID_MATCH_MODEL(PHY_ID_ADIN1100) },
+	{ PHY_ID_MATCH_MODEL(PHY_ID_ADIN1110) },
+	{ PHY_ID_MATCH_MODEL(PHY_ID_ADIN2111) },
 	{ }
 };
 
