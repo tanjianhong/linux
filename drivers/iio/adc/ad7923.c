@@ -78,7 +78,7 @@ enum ad7923_id {
 	AD7928
 };
 
-#define AD7923_V_CHAN(index, bits)					\
+#define AD7923_V_CHAN(index, bits, _shift)				\
 	{								\
 		.type = IIO_VOLTAGE,					\
 		.indexed = 1,						\
@@ -91,38 +91,39 @@ enum ad7923_id {
 			.sign = 'u',					\
 			.realbits = (bits),				\
 			.storagebits = 16,				\
+			.shift = (_shift),				\
 			.endianness = IIO_BE,				\
 		},							\
 	}
 
-#define DECLARE_AD7923_CHANNELS(name, bits) \
+#define DECLARE_AD7923_CHANNELS(name, bits, shift) \
 const struct iio_chan_spec name ## _channels[] = { \
-	AD7923_V_CHAN(0, bits), \
-	AD7923_V_CHAN(1, bits), \
-	AD7923_V_CHAN(2, bits), \
-	AD7923_V_CHAN(3, bits), \
+	AD7923_V_CHAN(0, bits, shift), \
+	AD7923_V_CHAN(1, bits, shift), \
+	AD7923_V_CHAN(2, bits, shift), \
+	AD7923_V_CHAN(3, bits, shift), \
 	IIO_CHAN_SOFT_TIMESTAMP(4), \
 }
 
-#define DECLARE_AD7908_CHANNELS(name, bits) \
+#define DECLARE_AD7908_CHANNELS(name, bits, shift) \
 const struct iio_chan_spec name ## _channels[] = { \
-	AD7923_V_CHAN(0, bits), \
-	AD7923_V_CHAN(1, bits), \
-	AD7923_V_CHAN(2, bits), \
-	AD7923_V_CHAN(3, bits), \
-	AD7923_V_CHAN(4, bits), \
-	AD7923_V_CHAN(5, bits), \
-	AD7923_V_CHAN(6, bits), \
-	AD7923_V_CHAN(7, bits), \
+	AD7923_V_CHAN(0, bits, shift), \
+	AD7923_V_CHAN(1, bits, shift), \
+	AD7923_V_CHAN(2, bits, shift), \
+	AD7923_V_CHAN(3, bits, shift), \
+	AD7923_V_CHAN(4, bits, shift), \
+	AD7923_V_CHAN(5, bits, shift), \
+	AD7923_V_CHAN(6, bits, shift), \
+	AD7923_V_CHAN(7, bits, shift), \
 	IIO_CHAN_SOFT_TIMESTAMP(8), \
 }
 
-static DECLARE_AD7923_CHANNELS(ad7904, 8);
-static DECLARE_AD7923_CHANNELS(ad7914, 10);
-static DECLARE_AD7923_CHANNELS(ad7924, 12);
-static DECLARE_AD7908_CHANNELS(ad7908, 8);
-static DECLARE_AD7908_CHANNELS(ad7918, 10);
-static DECLARE_AD7908_CHANNELS(ad7928, 12);
+static DECLARE_AD7923_CHANNELS(ad7904, 8, 4);
+static DECLARE_AD7923_CHANNELS(ad7914, 10, 2);
+static DECLARE_AD7923_CHANNELS(ad7924, 12, 0);
+static DECLARE_AD7908_CHANNELS(ad7908, 8, 4);
+static DECLARE_AD7908_CHANNELS(ad7918, 10, 2);
+static DECLARE_AD7908_CHANNELS(ad7928, 12, 0);
 
 static const struct ad7923_chip_info ad7923_chip_info[] = {
 	[AD7904] = {
@@ -272,7 +273,8 @@ static int ad7923_read_raw(struct iio_dev *indio_dev,
 			return ret;
 
 		if (chan->address == EXTRACT(ret, 12, 4))
-			*val = EXTRACT(ret, 0, 12);
+			*val = EXTRACT(ret, chan->scan_type.shift,
+				       chan->scan_type.realbits);
 		else
 			return -EIO;
 
@@ -298,6 +300,7 @@ static int ad7923_probe(struct spi_device *spi)
 	struct ad7923_state *st;
 	struct iio_dev *indio_dev;
 	const struct ad7923_chip_info *info;
+	u32 ad7923_range = AD7923_RANGE;
 	int ret;
 
 	indio_dev = devm_iio_device_alloc(&spi->dev, sizeof(*st));
@@ -308,8 +311,11 @@ static int ad7923_probe(struct spi_device *spi)
 
 	spi_set_drvdata(spi, indio_dev);
 
+	if (device_property_read_bool(&spi->dev, "adi,range-disable"))
+		ad7923_range = 0;
+
 	st->spi = spi;
-	st->settings = AD7923_CODING | AD7923_RANGE |
+	st->settings = AD7923_CODING | ad7923_range |
 			AD7923_PM_MODE_WRITE(AD7923_PM_MODE_OPS);
 
 	info = &ad7923_chip_info[spi_get_device_id(spi)->driver_data];
