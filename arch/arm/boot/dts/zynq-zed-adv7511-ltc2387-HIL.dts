@@ -179,14 +179,6 @@
 		};
 	};
 
-	dac_trigger_gen: pwm@44D50000 {
-		compatible = "adi,axi-pwmgen";
-		reg = <0x44D50000 0x1000>;
-		label = "ad3552r_trigger";
-		#pwm-cells = <2>;
-		clocks = <&ref_clk>;
-	};
-
 	spi_engine_dac0: spi@44D00000 {
 		compatible = "adi,axi-spi-engine-1.00.a";
 		reg = <0x44D00000 0x1000>;
@@ -206,7 +198,7 @@
 			#size-cells = <0>;
 			dmas = <&dac0_tx_dma 0>;
 			dma-names = "tx";
-			pwms = <&dac_trigger_gen 0 0>;
+			pwms = <&axi_pwm_gen 2 0>;
 			pwm-names = "cnv";
 			clocks = <&ref_clk>;
 			channel@0 {
@@ -225,7 +217,7 @@
 		reg = <0x44e00000 0x1000>;
 		interrupt-parent = <&intc>;
 		interrupts = <0 35 4>;
-		clocks = <&clkc 15 &spi_clkgen>;
+		clocks = <&clkc 15 &ref_clk>;
 		clock-names = "s_axi_aclk", "spi_clk";
 		num-cs = <1>;
 
@@ -237,9 +229,18 @@
 			spi-max-frequency = <20000000>;
 			#address-cells = <1>;
 			#size-cells = <0>;
+			dmas = <&dac0_tx_dma 0>;
+			dma-names = "tx";
+			pwms = <&axi_pwm_gen 3 0>;
+			pwm-names = "cnv";
+			clocks = <&ref_clk>;
 			channel@0 {
 			      reg = <0>;
-			      adi,output-range-microvolt = <0 5000000>;
+                              adi,output-range-microvolt = <(-10000000) 10000000>;
+		     	};
+			channel@1 {
+			      reg = <1>;
+                              adi,output-range-microvolt = <(-10000000) 10000000>;
 			};
 		};
 	}; */
@@ -268,6 +269,5 @@
 			compatible = "adi,ad7291";
 			reg = <0x20>;
 		};
-
 	};
 };
